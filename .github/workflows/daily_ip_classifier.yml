@@ -1,0 +1,48 @@
+# .github/workflows/daily_ip_classifier.yml
+name: Daily IP Classification
+
+on:
+  # 每天 UTC 时间 0 点自动运行 (UTC 00:00 相当于北京时间早上 8 点)
+  schedule:
+    - cron: '0 0 * * *'
+  # 允许在 GitHub Actions 界面手动触发此工作流
+  workflow_dispatch:
+
+jobs:
+  classify-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+      # 步骤 1: 检出你的仓库代码
+      - name: ⬇️ Checkout repository
+        uses: actions/checkout@v4
+        # 必须带上 token，以便后续的自动提交步骤可以推送修改
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }} 
+
+      # 步骤 2: 设置 Python 环境
+      - name: ⚙️ Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      # 步骤 3: 下载最新的 all.txt 文件
+      - name: 📥 Download all.txt
+        run: |
+          # 这是 BTN-Collected-Rules/combine/all.txt 文件的 raw 链接
+          curl -o all.txt https://raw.githubusercontent.com/PBH-BTN/BTN-Collected-Rules/main/combine/all.txt
+
+      # 步骤 4: 运行 Python 脚本进行分类和提取
+      - name: 🧪 Run Classification Script
+        run: python classify_and_extract_ips.py
+        
+      # 步骤 5: 自动提交生成的四个 .txt 文件
+      - name: ⬆️ Commit and Push Results
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          # 提交信息
+          commit_message: "Automatic: Update classified IP lists"
+          # 仅提交生成的四个结果文件
+          file_pattern: "*.txt"
+          # 提交作者信息 (使用 GitHub Actions 默认 Bot)
+          commit_user_name: "GitHub Actions Bot"
+          commit_user_email: "actions@github.com"
